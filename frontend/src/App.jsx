@@ -8,6 +8,10 @@ import Operator from "./pages/Operator";
 import Supervisor from "./pages/Supervisor";
 import Profile from "./pages/profile.jsx";
 import Loader from "./components/loader.jsx";
+import WasteManagement from "./pages/WasteManagement.jsx";
+import Marketplace from "./pages/Marketplace.jsx";
+import Leaderboard from "./pages/Leaderboard.jsx";
+import AIAssistantWidget from "./components/AIAssistantWidget.jsx";
 
 export default function App() {
 
@@ -38,6 +42,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-gray-100 dark:bg-gray-900 transition-colors duration-500">
+      <AIAssistantWidget />
 
       {/* Navbar */}
       <div className="flex justify-between items-center p-6">
@@ -49,12 +54,24 @@ export default function App() {
 
           {user && (
             <>
-              <Link to={`/${user.role}`} className="dark:text-white">
-                Dashboard
+              <Link to={`/${user.role}`} className="dark:text-white font-medium hover:text-indigo-500 transition">
+                Costing
               </Link>
 
               <Link to="/profile" className="dark:text-white">
                 Profile
+              </Link>
+
+              <Link to="/waste-management" className="dark:text-white">
+                Waste Calculator
+              </Link>
+              
+              <Link to="/marketplace" className="dark:text-white font-bold text-green-600 dark:text-green-400">
+                Marketplace
+              </Link>
+              
+              <Link to="/leaderboard" className="dark:text-white text-yellow-500">
+                ⭐ Leaderboard
               </Link>
             </>
           )}
@@ -84,6 +101,9 @@ export default function App() {
             <Route path="/operator" element={<Operator />} />
             <Route path="/supervisor" element={<Supervisor />} />
             <Route path="/profile" element={<Profile />} />
+            <Route path="/waste-management" element={<WasteManagement />} />
+            <Route path="/marketplace" element={<Marketplace />} />
+            <Route path="/leaderboard" element={<Leaderboard />} />
           </Routes>
         </motion.div>
       </AnimatePresence>
