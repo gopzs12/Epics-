@@ -1,3 +1,6 @@
+import functools
+
+@functools.lru_cache(maxsize=128)
 def optimize_layout(fabric_length: float, fabric_width: float, pattern_length: float, pattern_width: float):
     """
     Calculates the best possible cutting layout for a single rectangular pattern over a large fabric.

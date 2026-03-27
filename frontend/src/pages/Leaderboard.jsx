@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
-export default function Leaderboard() {
+export default function Leaderboard({ isDark }) {
   const [leaders, setLeaders] = useState([]);
 
   useEffect(() => {
@@ -11,56 +11,83 @@ export default function Leaderboard() {
       .catch(err => console.error("Error fetching leaderboard:", err));
   }, []);
 
+  const medals = ["🥇", "🥈", "🥉"];
+
   return (
-    <div className="p-8 max-w-4xl mx-auto dark:text-white min-h-screen">
-      <div className="text-center mb-10">
-          <h1 className="text-4xl font-extrabold text-indigo-600 dark:text-indigo-400 mb-2">
-             🏆 Eco Warriors Leaderboard
-          </h1>
-          <p className="text-gray-500">Compete to save the most fabric and earn the highest Eco Scores!</p>
+    <div className={`flex flex-col h-full antialiased pb-20 ${isDark ? 'text-prime-textDark' : 'text-prime-text'}`}>
+      
+      {/* Header */}
+      <div className="mb-10 w-full max-w-[800px]">
+         <h1 className={`text-[28px] font-semibold tracking-tight ${isDark ? 'text-white' : 'text-gray-900'}`}>
+            🏆 Global Leaderboard
+         </h1>
+         <p className={`text-[14px] mt-1 ${isDark ? 'text-prime-gray' : 'text-gray-500'}`}>
+            Operators ranked by Eco Points. Score 90+ on Eco Score to earn points!
+         </p>
       </div>
 
-      <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-xl overflow-hidden border border-gray-100 dark:border-gray-700">
-          <div className="bg-indigo-50 dark:bg-indigo-900/40 p-4 border-b dark:border-indigo-800 flex font-bold text-indigo-800 dark:text-indigo-200 uppercase text-sm">
-             <div className="w-16 text-center">Rank</div>
-             <div className="flex-1">Operator Profile</div>
-             <div className="w-32 text-right">Eco Points</div>
-          </div>
-          
-          <ul>
-              <AnimatePresence>
-              {leaders.map((user, idx) => (
-                  <motion.li 
-                      key={user.name}
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: idx * 0.1 }}
-                      className={`flex items-center p-6 border-b dark:border-gray-700 last:border-0 hover:bg-gray-50 dark:hover:bg-gray-750 transition ${idx === 0 ? 'bg-yellow-50/50 dark:bg-yellow-900/10' : ''}`}
-                  >
-                      <div className="w-16 text-center text-2xl font-black text-gray-400 dark:text-gray-500">
-                          {idx === 0 ? "🥇" : idx === 1 ? "🥈" : idx === 2 ? "🥉" : `#${idx + 1}`}
-                      </div>
-                      
-                      <div className="flex-1 flex items-center gap-4">
-                          <div className={`w-12 h-12 rounded-full flex items-center justify-center text-xl text-white shadow-inner font-bold ${idx === 0 ? 'bg-yellow-400' : 'bg-indigo-400'}`}>
-                             {user.name.charAt(0)}
-                          </div>
-                          <div>
-                              <p className="font-bold text-lg">{user.name}</p>
-                              {idx === 0 && <p className="text-xs text-yellow-600 dark:text-yellow-400 font-bold tracking-wider">Top Saver of the Month</p>}
-                          </div>
-                      </div>
-                      
-                      <div className="w-32 text-right">
-                          <span className={`text-2xl font-black ${idx === 0 ? 'text-yellow-500' : 'text-indigo-600 dark:text-indigo-400'}`}>
-                              {user.points}
-                          </span>
-                          <span className="text-xs text-gray-400 ml-1">pts</span>
-                      </div>
-                  </motion.li>
-              ))}
-              </AnimatePresence>
-          </ul>
+      <div className="w-full max-w-[800px]">
+         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+            className={`rounded-xl border shadow-sm overflow-hidden ${isDark ? 'bg-[#0a0a0a] border-[#27272a]' : 'bg-white border-[#e4e4e7]'}`}>
+            
+            {/* Header Row */}
+            <div className={`px-6 py-4 border-b flex items-center text-[12px] font-semibold uppercase tracking-wider
+                ${isDark ? 'border-[#27272a] bg-[#09090b] text-[#71717a]' : 'border-[#e4e4e7] bg-gray-50 text-gray-500'}
+            `}>
+               <div className="w-16 text-center">Rank</div>
+               <div className="flex-1">Operator</div>
+               <div className="w-32 text-right">Eco Points</div>
+            </div>
+            
+            {/* Rows */}
+            <div className={`divide-y ${isDark ? 'divide-[#27272a]' : 'divide-[#e4e4e7]'}`}>
+               <AnimatePresence>
+               {leaders.map((user, idx) => (
+                   <motion.div 
+                       key={user.name}
+                       initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: idx * 0.08 }}
+                       className={`flex items-center px-6 py-5 transition-colors
+                          ${isDark ? 'hover:bg-[#18181b]' : 'hover:bg-gray-50'}
+                          ${idx === 0 ? (isDark ? 'bg-amber-500/5' : 'bg-amber-50/50') : ''}
+                       `}
+                   >
+                       <div className="w-16 text-center">
+                          {idx < 3 ? (
+                             <span className="text-[22px]">{medals[idx]}</span>
+                          ) : (
+                             <span className={`text-[16px] font-bold ${isDark ? 'text-[#52525b]' : 'text-gray-400'}`}>#{idx + 1}</span>
+                          )}
+                       </div>
+                       
+                       <div className="flex-1 flex items-center gap-4">
+                           <div className={`w-10 h-10 rounded-full flex items-center justify-center text-[14px] font-bold text-white shadow-sm
+                              ${idx === 0 ? 'bg-gradient-to-br from-amber-400 to-amber-600' : 'bg-gradient-to-br from-blue-500 to-indigo-600'}
+                           `}>
+                              {user.name.charAt(0).toUpperCase()}
+                           </div>
+                           <div>
+                               <p className={`text-[14px] font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>{user.name}</p>
+                               {idx === 0 && <p className={`text-[11px] font-semibold mt-0.5 ${isDark ? 'text-amber-400' : 'text-amber-600'}`}>🔥 Top Saver of the Month</p>}
+                           </div>
+                       </div>
+                       
+                       <div className="w-32 text-right">
+                           <span className={`text-[20px] font-bold ${idx === 0 ? 'text-amber-500' : (isDark ? 'text-white' : 'text-gray-900')}`}>
+                               {user.points}
+                           </span>
+                           <span className={`text-[11px] ml-1 ${isDark ? 'text-[#71717a]' : 'text-gray-400'}`}>pts</span>
+                       </div>
+                   </motion.div>
+               ))}
+               </AnimatePresence>
+
+               {leaders.length === 0 && (
+                  <div className="p-12 text-center">
+                     <p className={`text-[13px] ${isDark ? 'text-[#a1a1aa]' : 'text-gray-500'}`}>No rankings yet. Start computing waste layouts with Eco Score 90+ to earn points!</p>
+                  </div>
+               )}
+            </div>
+         </motion.div>
       </div>
     </div>
   );

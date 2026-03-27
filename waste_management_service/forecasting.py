@@ -1,3 +1,6 @@
+import functools
+
+@functools.lru_cache(maxsize=256)
 def generate_environmental_forecast(current_waste_kg: float, current_eco_score: int) -> dict:
     """
     Advanced Mathematical Forecasting Model for EPICS.
@@ -15,7 +18,7 @@ def generate_environmental_forecast(current_waste_kg: float, current_eco_score: 
     months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun"]
     
     accumulated_waste = current_waste_kg
-    accumulated_cost_loss = current_waste_kg * 4.50 # Mocking a $4.50 average material value
+    accumulated_cost_loss = current_waste_kg * 4.50 # Mocking a ₹4.50 average material value
     
     for month in months:
         # Complex stochastic curve element (simulating actual factory variance +3% to -3%)
@@ -48,7 +51,7 @@ def generate_environmental_forecast(current_waste_kg: float, current_eco_score: 
         ai_verdict = "Your current trajectory represents an optimal sustainability curve. Margins are stabilized."
     else:
         financial_hit = round(forecast_data[-1]["projected_financial_loss"], 2)
-        ai_verdict = f"Critical alert: Environmental drag is bleeding margins. Expected an accumulated ${financial_hit} loss by {months[-1]} if layouts remain unoptimized."
+        ai_verdict = f"Critical alert: Environmental drag is bleeding margins. Expected an accumulated ₹{financial_hit} loss by {months[-1]} if layouts remain unoptimized."
 
     return {
         "success": True,

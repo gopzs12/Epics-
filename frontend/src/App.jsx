@@ -1,113 +1,166 @@
-import { Routes, Route, Link, useLocation } from "react-router-dom";
 import { useState, useEffect } from "react";
+import { BrowserRouter as Router, Routes, Route, Link, useLocation } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
-
-import Landing from "./pages/Landing";
-import Login from "./pages/Login";
-import Operator from "./pages/Operator";
-import Supervisor from "./pages/Supervisor";
-import Profile from "./pages/profile.jsx";
-import Loader from "./components/loader.jsx";
+import Login from "./pages/Login.jsx";
+import Operator from "./pages/Operator.jsx";
+import Supervisor from "./pages/Supervisor.jsx";
 import WasteManagement from "./pages/WasteManagement.jsx";
 import Marketplace from "./pages/Marketplace.jsx";
 import Leaderboard from "./pages/Leaderboard.jsx";
+import Approvals from "./pages/Approvals.jsx";
+import VirtualTryOn from "./pages/VirtualTryOn.jsx";
 import AIAssistantWidget from "./components/AIAssistantWidget.jsx";
 
 export default function App() {
+  const [user, setUser] = useState(null);
+  const [isDark, setIsDark] = useState(true);
 
-  const [dark, setDark] = useState(false);
-  const [loading, setLoading] = useState(true);
-
-  const location = useLocation();
-  const user = JSON.parse(localStorage.getItem("user"));
-
-  // Dark Mode
   useEffect(() => {
-    if (dark) {
-      document.documentElement.classList.add("dark");
-    } else {
-      document.documentElement.classList.remove("dark");
+    const rawUser = localStorage.getItem("user");
+    if (rawUser && rawUser !== "undefined") setUser(JSON.parse(rawUser));
+    
+    if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+       setIsDark(true);
     }
-  }, [dark]);
-
-  // Loader
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setLoading(false);
-    }, 1200);
-    return () => clearTimeout(timer);
   }, []);
 
-  if (loading) return <Loader />;
+  useEffect(() => {
+     if (isDark) document.documentElement.classList.add("dark");
+     else document.documentElement.classList.remove("dark");
+  }, [isDark]);
 
   return (
-    <div className="min-h-screen bg-gray-100 dark:bg-gray-900 transition-colors duration-500">
-      <AIAssistantWidget />
+    <div className={`flex w-full min-h-screen transition-colors duration-200 font-sans tracking-tight antialiased
+      ${isDark ? 'bg-prime-bgDark text-prime-textDark selection:bg-white/20' : 'bg-prime-bg text-prime-text selection:bg-black/10'}
+    `}>
+      
+      {user && <AIAssistantWidget user={user} isDark={isDark} />}
 
-      {/* Navbar */}
-      <div className="flex justify-between items-center p-6">
+      {/* Enterprise Sidebar */}
+      <AnimatePresence>
+        {user && (
+          <aside 
+            className={`w-[280px] shrink-0 flex flex-col justify-between py-8 px-6 border-r transition-colors duration-200 z-20
+               ${isDark ? 'bg-prime-bgDark border-prime-borderDark' : 'bg-prime-bg border-prime-border'}
+            `}
+          >
+             <div className="w-full mb-10 flex justify-between items-center px-2">
+                <div className="flex items-center gap-3">
+                   <div className="w-6 h-6 rounded bg-prime-blue flex items-center justify-center">
+                      <span className="text-white text-[12px] font-bold font-mono">GL</span>
+                   </div>
+                   <h1 className={`font-semibold text-[15px] tracking-tight ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                      GarmentLink
+                   </h1>
+                </div>
+                <span className={`text-[10px] font-mono px-2 py-0.5 rounded border ${isDark ? 'border-white/20 text-prime-gray' : 'border-black/10 text-gray-500'}`}>BETA</span>
+             </div>
 
-        <div className="flex gap-6 items-center">
-          <Link to="/" className="font-bold text-xl dark:text-white">
-            GarmentERP
-          </Link>
+             <nav className="flex-1 space-y-8">
+                <div>
+                   <p className="text-[11px] font-medium text-prime-gray mb-3 px-2">Applications</p>
+                   <ul className="space-y-1">
+                      <SidebarLink to={`/${user.role === 'supervisor' ? 'supervisor' : 'operator'}`} label={user.role === 'supervisor' ? "Analytics Hub" : "Costing & Estimation"} isDark={isDark} icon="⌘" />
+                      <SidebarLink to="/waste-management" label="Waste Optimizer" isDark={isDark} icon="◩" />
+                      <SidebarLink to="/virtual-tryon" label="Virtual Try-On" isDark={isDark} icon="◎" />
+                      {user.role === 'supervisor' && (
+                         <SidebarLink to="/approvals" label="Approvals" isDark={isDark} icon="✓" />
+                      )}
+                   </ul>
+                </div>
+                
+                <div>
+                   <p className="text-[11px] font-medium text-prime-gray mb-3 px-2">Network</p>
+                   <ul className="space-y-1">
+                      <SidebarLink to="/marketplace" label="Marketplace" isDark={isDark} icon="⟳" />
+                      <SidebarLink to="/leaderboard" label="Global Ranks" isDark={isDark} icon="★" />
+                   </ul>
+                </div>
+             </nav>
 
-          {user && (
-            <>
-              <Link to={`/${user.role}`} className="dark:text-white font-medium hover:text-indigo-500 transition">
-                Costing
-              </Link>
+             {/* Profile & Theme Switcher */}
+             <div className={`mt-8 pt-6 space-y-3 w-full border-t ${isDark ? 'border-prime-borderDark' : 'border-prime-border'}`}>
+                
+                <button 
+                  onClick={() => setIsDark(!isDark)}
+                  className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-[13px] font-medium transition-colors
+                     ${isDark ? 'text-prime-gray hover:text-white hover:bg-white/5' : 'text-gray-600 hover:text-black hover:bg-black/5'}
+                  `}
+                >
+                   <span>{isDark ? 'Dark Theme' : 'Light Theme'}</span>
+                   <kbd className={`font-mono text-[10px] px-1.5 py-0.5 rounded border ${isDark ? 'border-white/20 bg-white/5' : 'border-black/20 bg-black/5'}`}>
+                      {isDark ? '☾' : '☼'}
+                   </kbd>
+                </button>
 
-              <Link to="/profile" className="dark:text-white">
-                Profile
-              </Link>
+                <div 
+                   onClick={() => { localStorage.clear(); window.location.href="/"; }}
+                   className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-[13px] font-medium cursor-pointer transition-colors group
+                      ${isDark ? 'text-prime-gray hover:text-white hover:bg-white/5' : 'text-gray-600 hover:text-black hover:bg-black/5'}
+                   `}
+                >
+                   <div className="flex items-center gap-3">
+                      <div className={`w-5 h-5 rounded-full flex items-center justify-center font-bold text-[10px] ${isDark ? 'bg-white/10 text-white' : 'bg-black/10 text-black'}`}>
+                         {user.name.charAt(0).toUpperCase()}
+                      </div>
+                      <span>{user.name}</span>
+                   </div>
+                   <span className="opacity-0 group-hover:opacity-100 text-[11px] text-red-500 transition-opacity">Exit</span>
+                </div>
 
-              <Link to="/waste-management" className="dark:text-white">
-                Waste Calculator
-              </Link>
-              
-              <Link to="/marketplace" className="dark:text-white font-bold text-green-600 dark:text-green-400">
-                Marketplace
-              </Link>
-              
-              <Link to="/leaderboard" className="dark:text-white text-yellow-500">
-                ⭐ Leaderboard
-              </Link>
-            </>
-          )}
-        </div>
-
-        <button
-          onClick={() => setDark(!dark)}
-          className="bg-black dark:bg-white dark:text-black text-white px-4 py-2 rounded-xl text-sm"
-        >
-          {dark ? "Light Mode" : "Dark Mode"}
-        </button>
-
-      </div>
-
-      {/* Animated Routes */}
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={location.pathname}
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -20 }}
-          transition={{ duration: 0.4 }}
-        >
-          <Routes location={location} key={location.pathname}>
-            <Route path="/" element={<Landing />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/operator" element={<Operator />} />
-            <Route path="/supervisor" element={<Supervisor />} />
-            <Route path="/profile" element={<Profile />} />
-            <Route path="/waste-management" element={<WasteManagement />} />
-            <Route path="/marketplace" element={<Marketplace />} />
-            <Route path="/leaderboard" element={<Leaderboard />} />
-          </Routes>
-        </motion.div>
+             </div>
+          </aside>
+        )}
       </AnimatePresence>
+
+      {/* Main Content Pane */}
+      <main className={`flex-1 relative z-10 w-full h-full overflow-y-auto ${isDark ? 'bg-prime-bgDark' : 'bg-prime-bg'}`}>
+         <AnimatePresence mode="wait">
+           <Routes>
+             <Route path="/" element={<PageTransition><Login setIsDark={setIsDark} user={user} isDark={isDark} /></PageTransition>} />
+             <Route path="/operator" element={<PageTransition><Operator isDark={isDark} /></PageTransition>} />
+             <Route path="/supervisor" element={<PageTransition><Supervisor isDark={isDark} /></PageTransition>} />
+             <Route path="/waste-management" element={<PageTransition><WasteManagement isDark={isDark} /></PageTransition>} />
+             <Route path="/virtual-tryon" element={<PageTransition><VirtualTryOn isDark={isDark} /></PageTransition>} />
+             <Route path="/marketplace" element={<PageTransition><Marketplace isDark={isDark} /></PageTransition>} />
+             <Route path="/leaderboard" element={<PageTransition><Leaderboard isDark={isDark} /></PageTransition>} />
+             <Route path="/approvals" element={<PageTransition><Approvals isDark={isDark} /></PageTransition>} />
+           </Routes>
+         </AnimatePresence>
+      </main>
 
     </div>
   );
+}
+
+function SidebarLink({ to, label, icon, isDark }) {
+   const location = useLocation();
+   const active = location.pathname.includes(to) && to !== "/";
+
+   return (
+      <li>
+         <Link to={to} className={`flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-medium transition-colors
+             ${active 
+               ? (isDark ? "bg-white/10 text-white" : "bg-black/5 text-black") 
+               : (isDark ? "text-prime-gray hover:text-white hover:bg-white/5" : "text-gray-600 hover:text-black hover:bg-black/5")}
+         `}>
+            <span className="text-[12px] opacity-70">{icon}</span>
+            <span>{label}</span>
+         </Link>
+      </li>
+   );
+}
+
+function PageTransition({ children }) {
+   return (
+      <motion.div
+        initial={{ opacity: 0, filter: "blur(4px)" }}
+        animate={{ opacity: 1, filter: "blur(0px)" }}
+        exit={{ opacity: 0, filter: "blur(4px)" }}
+        transition={{ duration: 0.2, ease: "easeOut" }} 
+        className="w-full h-full min-h-screen relative p-8 md:p-12"
+      >
+         {children}
+      </motion.div>
+   );
 }
