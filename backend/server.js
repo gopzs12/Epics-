@@ -10,17 +10,8 @@ mongoose.connect("mongodb://127.0.0.1:27017/garmentDB")
   .then(() => console.log("MongoDB Connected"))
   .catch(err => console.log("⚠️ MongoDB Not Running locally (which is fine for the prototype)! Running Node server anyway..."));
 
-const CostingSchema = new mongoose.Schema({
-  style: String,
-  quantity: Number,
-  baseCost: Number,
-  finalPerPiece: Number,
-  total: Number,
-  predictedPrice: Number,
-  createdAt: { type: Date, default: Date.now }
-});
-
-const Costing = mongoose.model("Costing", CostingSchema);
+// Using an in-memory array for demo purposes so MongoDB isn't required
+let mockCostings = [];
 
 // EPICS - Mock Marketplace Array (so you don't need a real Database installed to demo it!)
 let mockMarketplace = [];
@@ -31,19 +22,21 @@ app.post("/save", async (req, res) => {
   const marginFactor = 1.12; // 12% AI suggested extra margin
   const predictedPrice = req.body.finalPerPiece * marginFactor;
 
-  const costing = new Costing({
+  const costing = {
     ...req.body,
-    predictedPrice
-  });
+    predictedPrice,
+    createdAt: new Date()
+  };
 
-  await costing.save();
+  mockCostings.push(costing);
 
   res.json({ message: "Saved", predictedPrice });
 });
 
 app.get("/all", async (req, res) => {
-  const data = await Costing.find().sort({ createdAt: -1 });
-  res.json(data);
+  // Sort by createdAt descending
+  const sortedData = [...mockCostings].sort((a, b) => b.createdAt - a.createdAt);
+  res.json(sortedData);
 });
 
 // EPICS Marketplace Endpoints

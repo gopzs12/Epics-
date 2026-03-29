@@ -64,7 +64,20 @@ export default function Operator({ isDark }) {
     setCalculating(false);
   };
 
-  const submitApproval = () => {
+  const submitApproval = async () => {
+      // Send to backend for Analytics Hub
+      try {
+          await axios.post("http://localhost:5000/save", {
+              style: result.style || "Unknown",
+              quantity: parseInt(result.quantity) || 0,
+              baseCost: parseFloat(result.base),
+              finalPerPiece: parseFloat(result.finalPerPiece),
+              total: parseFloat(result.total)
+          });
+      } catch (err) {
+          console.log("Failed to save to backend:", err);
+      }
+
       const pending = JSON.parse(localStorage.getItem("pending_approvals") || "[]");
       pending.push({
           id: Date.now(), style: result.style || "Unknown", quantity: result.quantity || 0,

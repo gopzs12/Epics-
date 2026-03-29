@@ -21,6 +21,7 @@ export default function VirtualTryOn({ isDark }) {
   const poseLandmarkerRef = useRef(null);
   const requestRef = useRef(null);
   const garmentImageRef = useRef(null);
+  const lastVideoTimeRef = useRef(-1);
 
   // Initialize Pose Landmarker
   useEffect(() => {
@@ -31,8 +32,8 @@ export default function VirtualTryOn({ isDark }) {
         );
         const landmarker = await PoseLandmarker.createFromOptions(vision, {
           baseOptions: {
-            modelAssetPath: `https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task`,
-            delegate: "GPU"
+            modelAssetPath: `https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_full/float16/1/pose_landmarker_full.task`,
+            delegate: "CPU"
           },
           runningMode: "VIDEO",
           numPoses: 1
@@ -96,10 +97,13 @@ export default function VirtualTryOn({ isDark }) {
   };
 
   const predictWebcam = () => {
-    if (!videoRef.current || !poseLandmarkerRef.current || !canvasRef.current || !cameraActive) return;
+    if (!videoRef.current || !poseLandmarkerRef.current || !canvasRef.current) return;
 
-    if (videoRef.current.currentTime !== -1) {
-        const results = poseLandmarkerRef.current.detectForVideo(videoRef.current, performance.now());
+    const startTimeMs = performance.now();
+    if (lastVideoTimeRef.current !== videoRef.current.currentTime) {
+        lastVideoTimeRef.current = videoRef.current.currentTime;
+        
+        const results = poseLandmarkerRef.current.detectForVideo(videoRef.current, startTimeMs);
         const ctx = canvasRef.current.getContext("2d");
         
         ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
@@ -152,6 +156,11 @@ export default function VirtualTryOn({ isDark }) {
             );
           }
         }
+        
+        // HUD Overlay to show detection status
+        ctx.fillStyle = results.landmarks && results.landmarks.length > 0 ? "#10b981" : "#ef4444";
+        ctx.font = "bold 16px sans-serif";
+        ctx.fillText(`AI Status: ${results.landmarks && results.landmarks.length > 0 ? "Tracking Locked (1)" : "Scanning for Person (0)"}`, 20, 30);
     }
     
     requestRef.current = requestAnimationFrame(predictWebcam);
