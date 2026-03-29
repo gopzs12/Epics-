@@ -10,6 +10,7 @@ export default function AIAssistantWidget({ isDark }) {
   const [inputText, setInputText] = useState("");
   const [listening, setListening] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
+  const [voiceEnabled, setVoiceEnabled] = useState(true);
   
   const endOfMessagesRef = useRef(null);
 
@@ -18,6 +19,7 @@ export default function AIAssistantWidget({ isDark }) {
   }, [messages, isTyping]);
 
   const speak = (text) => {
+    if (!voiceEnabled) return;
     if ('speechSynthesis' in window) {
       window.speechSynthesis.cancel(); 
       const utterance = new SpeechSynthesisUtterance(text);
@@ -107,15 +109,39 @@ export default function AIAssistantWidget({ isDark }) {
                         </div>
                     </div>
                  </div>
-                 <button 
-                   onClick={() => setIsOpen(false)} 
-                   className={`w-8 h-8 rounded-md flex items-center justify-center font-bold text-[16px] transition-colors
-                       ${isDark ? 'text-[#a1a1aa] hover:bg-[#27272a] hover:text-white' : 'text-gray-500 hover:bg-gray-100 hover:text-black'}
-                   `}
-                 >
-                     ×
-                 </button>
-             </div>
+                 <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2 mr-1">
+                        <span className={`text-[10px] font-bold uppercase tracking-wider ${isDark ? 'text-white/30' : 'text-black/30'}`}>Voice</span>
+                        <button 
+                          onClick={() => {
+                            setVoiceEnabled(!voiceEnabled);
+                            if (voiceEnabled) window.speechSynthesis.cancel();
+                          }} 
+                          className={`relative w-10 h-5 rounded-full transition-all duration-300 border
+                              ${voiceEnabled 
+                                ? (isDark ? 'bg-blue-600/20 border-blue-500/50' : 'bg-blue-500 border-blue-400')
+                                : (isDark ? 'bg-black border-[#27272a]' : 'bg-gray-100 border-gray-200')}
+                          `}
+                        >
+                            <motion.div 
+                                animate={{ x: voiceEnabled ? 20 : 2 }}
+                                transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                                className={`absolute top-1 w-2.5 h-2.5 rounded-full shadow-sm
+                                    ${voiceEnabled ? 'bg-white' : (isDark ? 'bg-[#3f3f46]' : 'bg-gray-400')}
+                                `}
+                            />
+                        </button>
+                    </div>
+                    <button 
+                      onClick={() => setIsOpen(false)} 
+                      className={`w-8 h-8 rounded-md flex items-center justify-center font-bold text-[16px] transition-colors
+                          ${isDark ? 'text-[#a1a1aa] hover:bg-[#27272a] hover:text-white' : 'text-gray-500 hover:bg-gray-100 hover:text-black'}
+                      `}
+                    >
+                        ×
+                    </button>
+                 </div>
+              </div>
 
              {/* Chat List */}
              <div className="flex-1 overflow-y-auto px-6 py-6 space-y-4 relative z-10 w-full">

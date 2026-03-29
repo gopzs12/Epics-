@@ -12,8 +12,13 @@ from environmental import calculate_environmental_impact
 from forecasting import generate_environmental_forecast
 from ml_predictor import predict_waste, generate_hybrid_analysis
 from cost_predictor import predict_cost, generate_cost_hybrid_analysis
+from defect_detector import DefectDetector
 
 app = FastAPI(title="GarmentLink — Hybrid Intelligent Manufacturing System")
+
+# Initialize the Defect Detector (YOLOv8)
+# It loads once at startup for speed.
+defect_model = DefectDetector(model_path="yolov8n.pt")
 
 app.add_middleware(
     CORSMiddleware,
@@ -227,6 +232,30 @@ async def estimate_waste_image_endpoint(file: UploadFile = File(...)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.post("/detect-defects")
+async def detect_defects_endpoint(file: UploadFile = File(...)):
+    """
+    DL Defect Detection Endpoint.
+    Returns bounding boxes and confidence for detected defects.
+    """
+    try:
+        contents = await file.read()
+        nparr = np.frombuffer(contents, np.uint8)
+        img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+        
+        if img is None:
+            raise HTTPException(status_code=400, detail="Invalid image file.")
+            
+        detections, _ = defect_model.detect(img)
+        
+        return {
+            "success": True,
+            "detected_count": len(detections),
+            "detections": detections
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.post("/forecast")
 async def forecast_endpoint(request: WasteRequest):
     try:
@@ -250,11 +279,14 @@ def model_status():
     import os
     waste_model = os.path.exists(os.path.join(os.path.dirname(__file__), "waste_model.pkl"))
     cost_model = os.path.exists(os.path.join(os.path.dirname(__file__), "cost_model.pkl"))
+    defect_model_file = os.path.exists(os.path.join(os.path.dirname(__file__), "yolov8n.pt"))
+    
     return {
         "waste_model": "ready" if waste_model else "not_trained",
         "cost_model": "ready" if cost_model else "not_trained",
-        "status": "all_ready" if (waste_model and cost_model) else "partial",
-        "message": "Both ML models are loaded and ready for predictions" if (waste_model and cost_model) else "Some models need training"
+        "defect_model": "ready" if (defect_model_file or defect_model) else "loading",
+        "status": "all_ready" if (waste_model and cost_model and defect_model_file) else "partial",
+        "message": "All ML models (Waste, Cost, Defect) are loaded and ready" if (waste_model and cost_model and defect_model_file) else "Some models need training or setup"
     }
 
 if __name__ == "__main__":
