@@ -16,6 +16,20 @@ export default function VirtualTryOn({ isDark }) {
   const [error, setError] = useState(null);
   const [debugState, setDebugState] = useState(true); // Toggle debug dots
 
+  // Real-time Calibration Sliders
+  const [sizeMultiplier, setSizeMultiplier] = useState(2.2);
+  const [verticalOffset, setVerticalOffset] = useState(0.12);
+  const sizeRef = useRef(2.2);
+  const vOffsetRef = useRef(0.12);
+
+  // Anti-Glitch / Jitter Prevention
+  const smoothedLandmarksRef = useRef(null);
+  const framesLostRef = useRef(0);
+
+  // Sync state to refs for the requestAnimationFrame closure
+  useEffect(() => { sizeRef.current = sizeMultiplier; }, [sizeMultiplier]);
+  useEffect(() => { vOffsetRef.current = verticalOffset; }, [verticalOffset]);
+
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const poseLandmarkerRef = useRef(null);
@@ -32,11 +46,13 @@ export default function VirtualTryOn({ isDark }) {
         );
         const landmarker = await PoseLandmarker.createFromOptions(vision, {
           baseOptions: {
-            modelAssetPath: `https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_full/float16/1/pose_landmarker_full.task`,
+            modelAssetPath: `https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task`,
             delegate: "CPU"
           },
           runningMode: "VIDEO",
-          numPoses: 1
+          numPoses: 1,
+          minPoseDetectionConfidence: 0.6,
+          minTrackingConfidence: 0.6
         });
         poseLandmarkerRef.current = landmarker;
         setLoading(false);
@@ -109,48 +125,97 @@ export default function VirtualTryOn({ isDark }) {
         ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
 
         if (results.landmarks && results.landmarks.length > 0) {
-          const landmarks = results.landmarks[0];
+          framesLostRef.current = 0; // Reset dropout counter
+          const rawLandmarks = results.landmarks[0];
           
-          // Shoulders (11, 12), Hips (23, 24)
-          const lSh = landmarks[11];
-          const rSh = landmarks[12];
+          if (!smoothedLandmarksRef.current) {
+              // First valid frame, initialize smoothed skeleton
+              smoothedLandmarksRef.current = JSON.parse(JSON.stringify(rawLandmarks));
+          } else {
+              // Apply Exponential Moving Average (EMA) to smooth out all tracking jitter
+              const alpha = 0.35; // Lower is smoother but slower, 0.35 is perfectly snappy & stable
+              for (let i = 0; i < rawLandmarks.length; i++) {
+                  smoothedLandmarksRef.current[i].x += (rawLandmarks[i].x - smoothedLandmarksRef.current[i].x) * alpha;
+                  smoothedLandmarksRef.current[i].y += (rawLandmarks[i].y - smoothedLandmarksRef.current[i].y) * alpha;
+              }
+          }
+        } else {
+          framesLostRef.current += 1; // Track how long we've been lost
+        }
+
+        // If we have a smoothed skeleton and haven't lost tracking for more than 30 frames (~0.5s)
+        if (smoothedLandmarksRef.current && framesLostRef.current < 30) {
+          const landmarks = smoothedLandmarksRef.current;
+          
+          // Shoulders (11, 12) - Clone them so we can modify without mutating the EMA state
+          const lSh = { ...landmarks[11] };
+          const rSh = { ...landmarks[12] };
+          
+          // EXPERIMENTAL FIX: Shift the shoulder joints UP by 5% to rest on the physical collarbones 
+          // (trapezius) instead of inside the armpit joints where MediaPipe defaults them.
+          lSh.y -= 0.05;
+          rSh.y -= 0.05;
+
           const lHp = landmarks[23];
           const rHp = landmarks[24];
+
+          // Points above the shoulder (0 = nose, 7/8 = ears)
+          const nose = landmarks[0];
+          const lEar = landmarks[7];
+          const rEar = landmarks[8];
 
           const w = canvasRef.current.width;
           const h = canvasRef.current.height;
 
+          // Midpoint logic
+          const midX = ((lSh.x + rSh.x) / 2) * w;
+          const neckY = ((lSh.y + rSh.y) / 2) * h;
+          
+          // Calculated neck base point
+          const neckPoint = { x: (lSh.x + rSh.x) / 2, y: (lSh.y + rSh.y) / 2 };
+
           // Draw Debug Tracker Dots
           if (debugState) {
-              ctx.fillStyle = "#3b82f6";
+              ctx.fillStyle = "#3b82f6"; // Blue shoulders & hips
               [lSh, rSh, lHp, rHp].forEach(pt => {
                   ctx.beginPath();
                   ctx.arc(pt.x * w, pt.y * h, 5, 0, Math.PI * 2);
                   ctx.fill();
               });
+
+              // Draw upper body points (green) above shoulders
+              ctx.fillStyle = "#10b981"; 
+              [nose, lEar, rEar, neckPoint].forEach(pt => {
+                  if (pt) {
+                      ctx.beginPath();
+                      ctx.arc(pt.x * w, pt.y * h, 4, 0, Math.PI * 2);
+                      ctx.fill();
+                  }
+              });
           }
 
-          // Calculate Torso Positioning
-          // Midpoint of shoulders for X
-          const midX = ((lSh.x + rSh.x) / 2) * w;
-          // Midpoint of shoulder to hip for Y
-          const neckY = ((lSh.y + rSh.y) / 2) * h;
           const hipY = ((lHp.y + rHp.y) / 2) * h;
           const torsoHeight = hipY - neckY;
           const midY = neckY + (torsoHeight * 0.45); // Centered on chest/belly
 
           // Scaling logic
-          // Garment width based on shoulder distance with slack
           const shoulderDist = Math.abs(lSh.x - rSh.x) * w;
-          const garmentWidth = shoulderDist * 2.2; 
-          const garmentHeight = torsoHeight * 1.5;
+          
+          // Width based on user's manual slider via ref
+          const garmentWidth = shoulderDist * sizeRef.current; 
+          
+          let garmentHeight = 0;
+          if (garmentImageRef.current) {
+               const aspectObj = garmentImageRef.current.height / garmentImageRef.current.width;
+               garmentHeight = garmentWidth * aspectObj;
+          }
 
           // Draw Garment
-          if (garmentImageRef.current) {
+          if (garmentImageRef.current && garmentHeight > 0) {
             ctx.drawImage(
               garmentImageRef.current,
               midX - (garmentWidth / 2),
-              neckY - (garmentHeight * 0.1), // Anchor near neck
+              neckY - (garmentHeight * vOffsetRef.current), // Anchor point based on manual vertical offset via ref
               garmentWidth,
               garmentHeight
             );
@@ -287,6 +352,45 @@ export default function VirtualTryOn({ isDark }) {
                          For the best experience, stand in a well-lit area about 2-3 meters from your camera. Wait for the blue dots to sync with your body.
                       </p>
                    </div>
+
+                   {/* AR Calibration Tools */}
+                   {cameraActive && (
+                     <div className={`mt-5 p-5 rounded-xl border ${isDark ? 'bg-black/20 border-[#27272a]' : 'bg-white border-gray-200 shadow-sm'}`}>
+                       <p className={`text-[11px] font-medium mb-4 flex items-center gap-2 ${isDark ? 'text-[#a1a1aa]' : 'text-gray-600'}`}>
+                          <span>⚙️</span> Live AR Calibration
+                       </p>
+                       
+                       <div className="space-y-4">
+                         <div>
+                           <div className="flex justify-between mb-1.5">
+                             <label className={`text-[10px] uppercase font-semibold ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>Garment Size</label>
+                             <span className={`text-[10px] font-mono ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{sizeMultiplier.toFixed(1)}x</span>
+                           </div>
+                           <input 
+                             type="range" 
+                             min="1.0" max="4.0" step="0.1"
+                             value={sizeMultiplier}
+                             onChange={(e) => setSizeMultiplier(parseFloat(e.target.value))}
+                             className="w-full h-1.5 bg-gray-600 rounded-lg appearance-none cursor-pointer accent-blue-500"
+                           />
+                         </div>
+
+                         <div>
+                           <div className="flex justify-between mb-1.5">
+                             <label className={`text-[10px] uppercase font-semibold ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>Vertical Offset</label>
+                             <span className={`text-[10px] font-mono ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{verticalOffset.toFixed(2)}</span>
+                           </div>
+                           <input 
+                             type="range" 
+                             min="-0.3" max="0.5" step="0.02"
+                             value={verticalOffset}
+                             onChange={(e) => setVerticalOffset(parseFloat(e.target.value))}
+                             className="w-full h-1.5 bg-gray-600 rounded-lg appearance-none cursor-pointer accent-blue-500"
+                           />
+                         </div>
+                       </div>
+                     </div>
+                   )}
                 </motion.div>
              </div>
 
