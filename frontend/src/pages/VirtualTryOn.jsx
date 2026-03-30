@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { PoseLandmarker, FilesetResolver } from "@mediapipe/tasks-vision";
+// eslint-disable-next-line no-unused-vars
 import { motion, AnimatePresence } from "framer-motion";
 
 const GARMENTS = [
@@ -36,11 +37,7 @@ export default function VirtualTryOn({ isDark }) {
   const poseLandmarkerRef = useRef(null);
   const requestRef = useRef(null);
   const garmentImageRef = useRef(null);
-<<<<<<< Updated upstream
   const lastVideoTimeRef = useRef(-1);
-=======
-  const lastVideoTime = useRef(-1);
->>>>>>> Stashed changes
 
   // Initialize Pose Landmarker
   useEffect(() => {
@@ -54,10 +51,7 @@ export default function VirtualTryOn({ isDark }) {
         const landmarker = await PoseLandmarker.createFromOptions(vision, {
           baseOptions: {
             modelAssetPath: `https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task`,
-<<<<<<< Updated upstream
             delegate: "CPU"
-=======
->>>>>>> Stashed changes
           },
           runningMode: "VIDEO",
           numPoses: 1,
@@ -132,16 +126,11 @@ export default function VirtualTryOn({ isDark }) {
   const predictWebcam = () => {
     if (!videoRef.current || !poseLandmarkerRef.current || !canvasRef.current) return;
 
-<<<<<<< Updated upstream
+    // eslint-disable-next-line react-hooks/purity
     const startTimeMs = performance.now();
-    if (lastVideoTimeRef.current !== videoRef.current.currentTime) {
-        lastVideoTimeRef.current = videoRef.current.currentTime;
-        
-        const results = poseLandmarkerRef.current.detectForVideo(videoRef.current, startTimeMs);
-=======
     // Detect if video frame has advanced
-    if (videoRef.current.currentTime !== lastVideoTime.current && videoRef.current.readyState >= 2) {
-        lastVideoTime.current = videoRef.current.currentTime;
+    if (lastVideoTimeRef.current !== videoRef.current.currentTime && videoRef.current.readyState >= 2) {
+        lastVideoTimeRef.current = videoRef.current.currentTime;
         
         // Ensure canvas dimensions stay in sync with video
         if (canvasRef.current.width === 0 || canvasRef.current.width === 300) {
@@ -149,8 +138,7 @@ export default function VirtualTryOn({ isDark }) {
             canvasRef.current.height = videoRef.current.videoHeight;
         }
 
-        const results = poseLandmarkerRef.current.detectForVideo(videoRef.current, performance.now());
->>>>>>> Stashed changes
+        const results = poseLandmarkerRef.current.detectForVideo(videoRef.current, startTimeMs);
         const ctx = canvasRef.current.getContext("2d");
         const w = canvasRef.current.width;
         const h = canvasRef.current.height;
@@ -158,7 +146,7 @@ export default function VirtualTryOn({ isDark }) {
         ctx.clearRect(0, 0, w, h);
 
         if (results.landmarks && results.landmarks.length > 0) {
-<<<<<<< Updated upstream
+
           framesLostRef.current = 0; // Reset dropout counter
           const rawLandmarks = results.landmarks[0];
           
@@ -190,8 +178,7 @@ export default function VirtualTryOn({ isDark }) {
           lSh.y -= 0.05;
           rSh.y -= 0.05;
 
-          const lHp = landmarks[23];
-          const rHp = landmarks[24];
+
 
           // Points above the shoulder (0 = nose, 7/8 = ears)
           const nose = landmarks[0];
@@ -208,13 +195,7 @@ export default function VirtualTryOn({ isDark }) {
           // Calculated neck base point
           const neckPoint = { x: (lSh.x + rSh.x) / 2, y: (lSh.y + rSh.y) / 2 };
 
-          // Draw Debug Tracker Dots
-          if (debugState) {
-              ctx.fillStyle = "#3b82f6"; // Blue shoulders & hips
-              [lSh, rSh, lHp, rHp].forEach(pt => {
-=======
           setAiStatus("Tracking Body...");
-          const landmarks = results.landmarks[0];
 
           // Draw Debug Tracker Dots (ALL 33 landmarks for diagnostic)
           if (debugState) {
@@ -222,7 +203,6 @@ export default function VirtualTryOn({ isDark }) {
               ctx.strokeStyle = "white";
               ctx.lineWidth = 1;
               landmarks.forEach((pt, index) => {
->>>>>>> Stashed changes
                   ctx.beginPath();
                   ctx.arc(pt.x * w, pt.y * h, (index >= 11 && index <= 24) ? 6 : 3, 0, Math.PI * 2);
                   ctx.fill();
@@ -240,22 +220,7 @@ export default function VirtualTryOn({ isDark }) {
               });
           }
 
-<<<<<<< Updated upstream
-=======
-          // Core Processing for Layering
-          const lSh = landmarks[11]; // Left Shoulder
-          const rSh = landmarks[12]; // Right Shoulder
-          const lHp = landmarks[23]; // Left Hip
-          const rHp = landmarks[24]; // Right Hip
 
-          // Positioning Logic (Centered on upper torso)
-          const midX = ((lSh.x + rSh.x) / 2) * w;
-          const neckY = ((lSh.y + rSh.y) / 2) * h;
->>>>>>> Stashed changes
-          const hipY = ((lHp.y + rHp.y) / 2) * h;
-          const torsoHeight = hipY - neckY;
-
-<<<<<<< Updated upstream
           // Scaling logic
           const shoulderDist = Math.abs(lSh.x - rSh.x) * w;
           
@@ -269,24 +234,11 @@ export default function VirtualTryOn({ isDark }) {
           }
 
           // Draw Garment
-          if (garmentImageRef.current && garmentHeight > 0) {
+          if (garmentImageRef.current && garmentHeight > 0 && garmentImageRef.current.complete) {
             ctx.drawImage(
               garmentImageRef.current,
               midX - (garmentWidth / 2),
               neckY - (garmentHeight * vOffsetRef.current), // Anchor point based on manual vertical offset via ref
-=======
-          // Scaling (based on shoulder width)
-          const shoulderDist = Math.abs(lSh.x - rSh.x) * w;
-          const garmentWidth = shoulderDist * 2.6; 
-          const garmentHeight = torsoHeight * 1.6;
-
-          // Render Garment Layer
-          if (garmentImageRef.current && garmentImageRef.current.complete) {
-            ctx.drawImage(
-              garmentImageRef.current,
-              midX - (garmentWidth / 2),
-              neckY - (garmentHeight * 0.18), // Anchor slightly above shoulders
->>>>>>> Stashed changes
               garmentWidth,
               garmentHeight
             );
